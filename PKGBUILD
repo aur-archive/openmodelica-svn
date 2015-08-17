@@ -1,0 +1,82 @@
+# Maintainer: viperpaulo
+pkgname=openmodelica-svn
+pkgver=21335
+pkgrel=1
+pkgdesc="The Open Source Modelica Compiler "
+arch=('i686' 'x86_64')
+url="https://openmodelica.org"
+license=('GPL3')
+depends=('lpsolve' 'sqlite3' 'omniorb' 'qwt5' 'blas' 'lapack' 'rml-mmc-svn' 'libcl' 'opencl-headers' 'sundials' 'metis')
+makedepends=('antlr2' 'subversion' 'jre7-openjdk' 'boost' 'autoconf' 'paradiseo')
+
+source=('openmodelica::svn+https://openmodelica.org/svn/OpenModelica/trunk/')
+md5sums=('SKIP')
+# options=('!makeflags')
+_svntrunk="https://openmodelica.org/svn/OpenModelica/trunk/"
+_svnmod="openmodelica"
+
+pkgver() {
+   cd "${SRCDEST}/${_svnmod}"
+   svnversion
+}
+
+prepare() {
+#   if [ -f /usr/lib/libmetis.a ]
+#   then
+#     echo "/usr/lib/libmetis.a exists"
+#   else
+#     echo "Static version of Metis is not installed"
+#     echo "Please compile and install it or disable --with-METIS option "
+#     echo "To compile as static library use options=('staticlibs') in Metis' PKGBUILD"
+#     echo " and use \"make config static=1 prefix=/usr\" instead of \"make config shared=1 prefix=/usr\""
+#     exit 1
+#   fi
+
+  sed -i -e 's/update(temperature)/update(temperature,TRUE)/g' ${srcdir}/${_svnmod}/OMOptim/Core/Optim/EA/SA1/SA1explorer.h
+  sed -i -e 's/\/lib\/libmetis.a/\/lib\/libmetis.so/g' ${srcdir}/${_svnmod}/Compiler/omc_release/Makefile.in
+
+[[ $CARCH == 'x86_64' ]] && {
+  sed -i -e 's/\/lib\*\/libeo.a/\/lib64\/libeo.a/g' ${srcdir}/${_svnmod}/configure.in
+}
+[[ $CARCH == 'i686' ]] && {
+  sed -i -e 's/\/lib\*\/libeo.a/\/lib32\/libeo.a/g' ${srcdir}/${_svnmod}/configure.in
+}
+
+}
+
+build() {
+   cd "${srcdir}/${_svnmod}"
+   autoconf
+
+   ./configure --prefix=/usr/ \
+      --with-omniORB \
+      --with-paradiseo \
+      --with-qwt \
+      --with-BOOST=/usr \
+      --with-METIS=/usr \
+      --disable-modelica3d \
+      --disable-python-interface \
+      --with-lapack='-llapack -lblas'
+   
+    make
+}
+
+# check() {
+#   cd "${srcdir}/${_svnmod}"
+#   make test
+# }
+
+package() {
+  mkdir -p ${pkgdir}/usr/bin
+#   mkdir -p ${pkgdir}/opt/${_pkgname}
+
+  cd "${srcdir}/${_svnmod}"
+  make DESTDIR="${pkgdir}" install
+
+  ln -s ${pkgdir}/usr/lib/omc/libomqwt.so ${pkgdir}/usr/lib/
+  ln -s ${pkgdir}/usr/lib/omc/libomqwt.so.6 ${pkgdir}/usr/lib/
+  ln -s ${pkgdir}/usr/lib/omc/libomqwt.so.6.2 ${pkgdir}/usr/lib/
+  ln -s ${pkgdir}/usr/lib/omc/libomqwt.so.6.2.0 ${pkgdir}/usr/lib/
+
+
+}
